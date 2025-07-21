@@ -1,5 +1,5 @@
 // pages/api/create-checkout-session.js
-import { NextApiRequest, NextApiResponse } from 'next';
+import { buffer } from 'micro';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
