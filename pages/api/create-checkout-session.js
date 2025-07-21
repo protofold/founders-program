@@ -1,14 +1,7 @@
 // pages/api/create-checkout-session.js
-import { buffer } from 'micro';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-export const config = {
-  api: {
-    bodyParser: false, // Important for Stripe signature
-  },
-};
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -16,25 +9,25 @@ export default async function handler(req, res) {
     return;
   }
 
+  const { email } = req.body;
+
   try {
-    const { headers } = req;
-    const buf = await buffer(req);
-    const sig = headers['stripe-signature'];
-    
-    const event = stripe.webhooks.constructEvent(
-      buf,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      // handle post-payment update logic here
-    }
-
-    res.json({ received: true });
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: 'prod_SirsUzmK1tACqT', // Replace with your actual Stripe Price ID
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: 'https://letunfold.com/success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: 'https://letunfold.com/cancel',
+      customer_email: email, // optional, for pre-filled email
+    });
+    res.json({ url: session.url });
   } catch (err) {
-    console.log('Error:', err.message);
-    res.status(400).send(`Webhook Error: ${err.message}`);
+    console.error('Error creating checkout session:', err);
+    res.status(500).json({ error: 'Failed to create checkout session' });
   }
 }
